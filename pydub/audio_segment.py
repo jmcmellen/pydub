@@ -30,7 +30,7 @@ if sys.version_info >= (3, 0):
     basestring = str
     xrange = range
     StringIO = BytesIO
-    
+
 
 class ClassPropertyDescriptor(object):
 
@@ -53,7 +53,7 @@ class ClassPropertyDescriptor(object):
         if not isinstance(func, (classmethod, staticmethod)):
             func = classmethod(func)
         self.fset = func
-        return self    
+        return self
 
 def classproperty(func):
     if not isinstance(func, (classmethod, staticmethod)):
@@ -86,7 +86,7 @@ class AudioSegment(object):
     @classproperty
     def ffmpeg(cls):
         return cls.converter
-    
+
     @ffmpeg.setter
     def ffmpeg(cls, val):
         cls.converter = val
@@ -388,8 +388,8 @@ class AudioSegment(object):
 
         bitrate (string)
             Bitrate used when encoding destination file. (64, 92, 128, 256, 312k...)
-            Each codec accepts different bitrate arguments so take a look at the 
-            ffmpeg documentation for details (bitrate usually shown as -b, -ba or 
+            Each codec accepts different bitrate arguments so take a look at the
+            ffmpeg documentation for details (bitrate usually shown as -b, -ba or
             -a:b).
 
         parameters (string)
@@ -582,10 +582,29 @@ class AudioSegment(object):
 
         # since half is above 0 and half is below the max amplitude is divided
         return max_possible_val / 2
-        
+
     @property
     def peak(self):
         return round(ratio_to_db(self.max, self.max_possible_amplitude), 1)
+
+    @property
+    def lufs(self):
+        '''Construct wave data in memory and run the ffmpeg ebur128 routine to analyze'''
+        data = StringIO()
+        wave_data = wave.open(data, 'wb')
+        wave_data.setnchannels(self.channels)
+        wave_data.setsampwidth(self.sample_width)
+        wave_data.setframerate(self.frame_rate)
+        # For some reason packing the wave header struct with
+        # a float in python 2 doesn't throw an exception
+        wave_data.setnframes(int(self.frame_count()))
+        wave_data.writeframesraw(self._data)
+        wave_data.close()
+        data.seek(0)
+        lufs = calc_lufs(data)
+        data.close()
+        return lufs
+
 
     @property
     def duration_seconds(self):
