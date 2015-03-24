@@ -88,7 +88,7 @@ def ratio_to_db(ratio, val2=None, using_amplitude=True):
         return 20 * log(ratio, 10)
     else: # using power
         return 10 * log(ratio, 10)
-    
+
 
 def register_pydub_effect(fn, name=None):
     """
@@ -221,3 +221,26 @@ def mediainfo(filepath):
                 info[key] = value
 
     return info
+
+def calc_lufs(wave_data):
+    ilufs = re.compile("I:\s?(.*)\sLUFS", re.MULTILINE)
+    ffcmd = ['ffmpeg',
+             '-nostats',
+             '-i',
+             'pipe:0',
+             '-filter_complex',
+             "asplit [a][b]; [a]volumedetect; [b]ebur128=peak=true",
+             '-f',
+             'null',
+             '-']
+    ps = Popen(ffcmd, stdin=PIPE,
+                          stderr=PIPE)
+    stdout, stderr = ps.communicate(wave_data.read())
+    #print stderr
+    summary = stderr[stderr.rfind("Summary:"):]
+    m = ilufs.findall(summary)
+    try:
+        val = float(m[0])
+    except:
+        val = -float('infinity')
+    return val
