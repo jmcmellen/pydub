@@ -593,22 +593,21 @@ class AudioSegment(object):
     @property
     def lufs(self):
         '''Construct wave data in memory and run the ffmpeg ebur128 routine to analyze'''
-        #return self._ebur128
-
-        data = StringIO()
-        wave_data = wave.open(data, 'wb')
-        wave_data.setnchannels(self.channels)
-        wave_data.setsampwidth(self.sample_width)
-        wave_data.setframerate(self.frame_rate)
-        # For some reason packing the wave header struct with
-        # a float in python 2 doesn't throw an exception
-        wave_data.setnframes(int(self.frame_count()))
-        wave_data.writeframesraw(self._data)
-        wave_data.close()
-        data.seek(0)
-        lufs = analyze_ebur128(data)
-        data.close()
-        return lufs
+        if not self._ebur128.get("lufs", False):
+            data = StringIO()
+            wave_data = wave.open(data, 'wb')
+            wave_data.setnchannels(self.channels)
+            wave_data.setsampwidth(self.sample_width)
+            wave_data.setframerate(self.frame_rate)
+            # For some reason packing the wave header struct with
+            # a float in python 2 doesn't throw an exception
+            wave_data.setnframes(int(self.frame_count()))
+            wave_data.writeframesraw(self._data)
+            wave_data.close()
+            data.seek(0)
+            self._ebur128 = analyze_ebur128(data)
+            data.close()
+        return self._ebur128.get("lufs")
 
 
     @property
