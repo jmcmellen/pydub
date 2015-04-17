@@ -222,8 +222,9 @@ def mediainfo(filepath):
 
     return info
 
-def calc_lufs(wave_data):
+def analyze_ebur128(wave_data):
     ilufs = re.compile("I:\s?(.*)\sLUFS", re.MULTILINE)
+    true_peak = re.compile("True\speak:\s*Peak:\s*(.*)\s*dBFS", re.MULTILINE)
     ffcmd = ['ffmpeg',
              '-nostats',
              '-i',
@@ -238,9 +239,16 @@ def calc_lufs(wave_data):
     stdout, stderr = ps.communicate(wave_data.read())
     #print stderr
     summary = stderr[stderr.rfind("Summary:"):]
+    #print summary
     m = ilufs.findall(summary)
     try:
-        val = float(m[0])
+        lufs_val = float(m[0])
     except:
-        val = -float('infinity')
-    return val
+        lufs_val = -float('infinity')
+
+    m = true_peak.findall(summary)
+    try:
+        true_peak_val = float(m[0])
+    except:
+        true_peak_val = -float('infinity')
+    return {'lufs': lufs_val, 'true_peak': true_peak_val }

@@ -17,7 +17,7 @@ from .utils import (
     ratio_to_db,
     get_encoder_name,
     audioop,
-    calc_lufs,
+    analyze_ebur128,
 )
 from .exceptions import (
     TooManyMissingFrames,
@@ -106,6 +106,7 @@ class AudioSegment(object):
             # normal construction
             data = data if isinstance(data, basestring) else data.read()
             raw = wave.open(StringIO(data), 'rb')
+            self._ebur128 = analyze_ebur128(StringIO(data))
 
             raw.rewind()
             self.channels = raw.getnchannels()
@@ -244,7 +245,8 @@ class AudioSegment(object):
             'sample_width': self.sample_width,
             'frame_rate': self.frame_rate,
             'frame_width': self.frame_width,
-            'channels': self.channels
+            'channels': self.channels,
+            '_ebur128': self._ebur128
         }
         metadata.update(overrides)
         return AudioSegment(data=data, metadata=metadata)
@@ -591,6 +593,8 @@ class AudioSegment(object):
     @property
     def lufs(self):
         '''Construct wave data in memory and run the ffmpeg ebur128 routine to analyze'''
+        #return self._ebur128
+
         data = StringIO()
         wave_data = wave.open(data, 'wb')
         wave_data.setnchannels(self.channels)
@@ -602,7 +606,7 @@ class AudioSegment(object):
         wave_data.writeframesraw(self._data)
         wave_data.close()
         data.seek(0)
-        lufs = calc_lufs(data)
+        lufs = analyze_ebur128(data)
         data.close()
         return lufs
 
